@@ -1,0 +1,53 @@
+name: Build QEMU-iOS
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        repository: devos50/qemu-ios
+        ref: ipod_touch_2g
+
+    - name: Set up dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          make \
+          ninja-build \
+          pkg-config \
+          libssl-dev \
+          libsdl2-dev \
+          libpixman-1-dev \
+          libpixman-1-0 \
+          libglib2.0-dev
+
+    - name: Create build directory
+      run: mkdir build
+
+    - name: Configure QEMU for iPod Touch 2G
+      working-directory: build
+      run: ../configure --enable-sdl --disable-cocoa --target-list=arm-softmmu --disable-capstone --disable-slirp --extra-cflags=-I/usr/include/openssl --extra-ldflags='-lcrypto' --disable-werror --enable-pie
+
+    - name: Build QEMU
+      working-directory: build
+      run: make -j$(nproc)
+
+    - name: Zip the build folder
+      run: zip -r ubuntu-build-zip.zip build
+
+    - name: Upload build folder as zip
+      uses: actions/upload-artifact@v3
+      with:
+        name: ubuntu-build-zip
+        path: ubuntu-build-zip.zip
